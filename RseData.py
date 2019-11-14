@@ -16,7 +16,27 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """
+from __future__ import print_function
+#
+# Migarting 2 -> 3
+#
+try:
+   # Python 2
+   from urllib2 import quote
+   from urllib2 import urlopen
+   from urllib2 import Request
+   PY2 = True
+   PY3 = False
 
+except ModuleNotFoundError:
+   # Python 3
+   from urllib.parse import quote
+   from urllib.request import urlopen
+   from urllib.request import Request
+   PY2 = False
+   PY3 = True
+#
+#
 import plug
 import sys
 import os
@@ -284,7 +304,10 @@ class RseData(object):
                 systems.append(eliteSystem)
 
         # filter out systems that have been completed or are ignored
-        systems = filter(lambda system: system.id64 not in self.getCachedSet(RseData.CACHE_IGNORED_SYSTEMS), systems)
+        if PY3:
+            systems = list(filter(lambda system: system.id64 not in self.getCachedSet(RseData.CACHE_IGNORED_SYSTEMS), systems))
+        else:
+            systems = filter(lambda system: system.id64 not in self.getCachedSet(RseData.CACHE_IGNORED_SYSTEMS), systems)
         systems.sort(key=lambda l: l.distance)
 
         self.systemList = systems
