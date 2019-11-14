@@ -16,9 +16,32 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """
+from __future__ import print_function
+
+DEBUG = False
+#
+# Migarting 2 -> 3
+#
+try:
+   # Python 2
+   from urllib2 import quote
+   from urllib2 import urlopen
+   from urllib2 import Request
+   PY2 = True
+   PY3 = False
+
+except ModuleNotFoundError:
+   # Python 3
+   from urllib.parse import quote
+   from urllib.request import urlopen
+   from urllib.request import Request
+   PY2 = False
+   PY3 = True
+#
+#
+#
 
 import json
-import urllib2
 import time
 import sys
 
@@ -57,7 +80,13 @@ class BackgroundTaskClosestSystem(BackgroundTask):
             self.rseData.frame.event_generate(RseData.EVENT_RSE_BACKGROUNDWORKER, when="tail")  # calls updateUI in main thread
 
     def getSystemFromID(self, id64):
-        system = filter(lambda x: x.id64 == id64, self.rseData.systemList)[:1]  # there is only one possible match for ID64, avoid exception being thrown
+        if DEBUG:
+            print('RSE-BGW-FromID:', self.rseData.systemList)
+        
+        if PY3:
+            system = list(filter( lambda x: x.id64 == id64, self.rseData.systemList))[:1]  # there is only one possible match for ID64, avoid exception being thrown
+        else:
+            system = filter( lambda x: x.id64 == id64, self.rseData.systemList)[:1]  # there is only one possible match for ID64, avoid exception being thrown
         if len(system) > 0:
             return system[0]
         else:
@@ -103,14 +132,14 @@ class JumpedSystemTask(BackgroundTaskClosestSystem):
         addToCache = list()
         for system in systems:
             if system.uncertainty > 0 and system.id64 not in cache:
-                params.append("systemName[]={name}".format(name=urllib2.quote(system.name)))
+                params.append("systemName[]={name}".format(name=quote(system.name)))
                 addToCache.append(system.id64)
         edsmUrl += "&".join(params)
 
         if __debug__: print("querying EDSM for {} systems".format(len(params)))
         if len(params) > 0:
             try:
-                url = urllib2.urlopen(edsmUrl, timeout=10)
+                url = urlopen(edsmUrl, timeout=10)
                 response = url.read()
                 edsmJson = json.loads(response)
                 for entry in edsmJson:
@@ -192,8 +221,8 @@ class VersionCheckTask(BackgroundTask):
 
     def execute(self):
         try:
-            request = urllib2.Request(RseData.VERSION_CHECK_URL)
-            response = urllib2.urlopen(request)
+            request = Request(RseData.VERSION_CHECK_URL)
+            response = urlopen(request)
             newVersionInfo = json.loads(response.read())
             if RseData.VERSION != newVersionInfo["version"]:
                 self.rseData.lastEventInfo[RseData.BG_UPDATE_JSON] = newVersionInfo
@@ -248,11 +277,11 @@ class FSSDiscoveryScanTask(EdsmBodyCheck):
         self.progress = progress
 
     def queryEdsm(self):
-        edsmUrl = "https://www.edsm.net/api-system-v1/bodies?systemName={name}".format(name=urllib2.quote(self.systemName))
+        edsmUrl = "https://www.edsm.net/api-system-v1/bodies?systemName={name}".format(name=quote(self.systemName))
         if __debug__:
             print("querying EDSM for bodies of system {}".format(self.systemName))
         try:
-            url = urllib2.urlopen(edsmUrl, timeout=10)
+            url = urlopen(edsmUrl, timeout=10)
             response = url.read()
             edsmJson = json.loads(response)
             return edsmJson["id64"], len(edsmJson["bodies"])
