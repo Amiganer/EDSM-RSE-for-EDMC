@@ -16,15 +16,33 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """
-
+from __future__ import print_function
+from collections import defaultdict
+import requests
 import sys
-import urllib2
-import time
-from Queue import Queue
+#
+# Migarting 2 -> 3
+#
+try:
+   # Python 2
+   from urllib2 import quote
+   import Tkinter as tk
+   import ttk
+   import tkMessageBox
+   from Queue import Queue
+except ModuleNotFoundError:
+   # Python 3
+   from urllib.parse import quote
+   import tkinter as tk
+   import tkinter.ttk as ttk
+   import tkinter.messagebox as tkMessageBox
+   from queue import Queue
+#
+#
+#
 
-import Tkinter as tk
-import tkMessageBox
-import ttk
+import time
+
 from ttkHyperlinkLabel import HyperlinkLabel
 import myNotebook as nb
 
@@ -109,7 +127,11 @@ def plugin_start(plugin_dir):
     this.worker.start()
 
     return "EDSM-RSE"
-
+#
+# for python 3
+#
+def plugin_start3(plugin_dir):
+    return plugin_start(plugin_dir)
 
 def updateUiUnconfirmedSystem(event=None):
     eliteSystem = this.rseData.lastEventInfo.get(RseData.BG_RSE_SYSTEM, None)
@@ -118,7 +140,7 @@ def updateUiUnconfirmedSystem(event=None):
         this.errorLabel.grid_remove()
         this.unconfirmedSystem.grid(row=0, column=1, sticky=tk.W)
         this.unconfirmedSystem["text"] = eliteSystem.name
-        this.unconfirmedSystem["url"] = "https://www.edsm.net/show-system?systemName={}".format(urllib2.quote(eliteSystem.name))
+        this.unconfirmedSystem["url"] = "https://www.edsm.net/show-system?systemName={}".format(quote(eliteSystem.name))
         this.unconfirmedSystem["state"] = "enabled"
         distanceText = u"{distance} Ly".format(distance=Locale.stringFromNumber(eliteSystem.distance, 2))
         if eliteSystem.uncertainty > 0:
@@ -165,7 +187,7 @@ def clearScannedSystemsCacheCallback(cacheType, name):
         this.queue.put(BackgroundTask.DeleteSystemsFromCacheTask(this.rseData, cacheType))
 
 
-def plugin_prefs(parent):
+def plugin_prefs(parent, cmd, is_beta):
     PADX = 5
 
     frame = nb.Frame(parent)
@@ -214,7 +236,7 @@ def plugin_prefs(parent):
     return frame
 
 
-def prefs_changed():
+def prefs_changed(cmd, is_beta):
     # bits are as follows:
     # 0-3 radius # not used anymore
     # 4-5 interval, not used anymore
